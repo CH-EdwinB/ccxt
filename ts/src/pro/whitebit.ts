@@ -779,7 +779,8 @@ export default class whitebit extends whitebitRest {
             if (method in client.subscriptions) {
                 delete client.subscriptions[method];
             }
-            return await this.watch (url, messageHash, request, method, subscription);
+            const message = this.extend (request, params);
+            return await this.watch (url, messageHash, message, method, subscription);
         }
     }
 
