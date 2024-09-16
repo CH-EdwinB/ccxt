@@ -263,7 +263,7 @@ export default class whitebit extends whitebitRest {
         const method = 'market_subscribe';
         const messageHash = 'ticker:' + symbol;
         // every time we want to subscribe to another market we have to "re-subscribe" sending it all again
-        return await this.watchMultipleSubscription (messageHash, method, symbol, false, params);
+        return await this.addSubscription ('ticker', method, symbol, false, params);
     }
 
     handleTicker (client: Client, message) {
@@ -331,10 +331,9 @@ export default class whitebit extends whitebitRest {
         await this.loadMarkets ();
         const market = this.market (symbol);
         symbol = market['symbol'];
-        const messageHash = 'trades' + ':' + symbol;
         const method = 'trades_subscribe';
         // every time we want to subscribe to another market we have to 're-subscribe' sending it all again
-        const trades = await this.watchMultipleSubscription (messageHash, method, symbol, false, params);
+        const trades = await this.addSubscription ('trades', method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -404,9 +403,8 @@ export default class whitebit extends whitebitRest {
         await this.authenticate ();
         const market = this.market (symbol);
         symbol = market['symbol'];
-        const messageHash = 'myTrades:' + symbol;
         const method = 'deals_subscribe';
-        const trades = await this.watchMultipleSubscription (messageHash, method, symbol, true, params);
+        const trades = await this.addSubscription ('myTrades', method, symbol, true, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -507,9 +505,8 @@ export default class whitebit extends whitebitRest {
         await this.authenticate ();
         const market = this.market (symbol);
         symbol = market['symbol'];
-        const messageHash = 'orders:' + symbol;
         const method = 'ordersPending_subscribe';
-        const trades = await this.watchMultipleSubscription (messageHash, method, symbol, false, params);
+        const trades = await this.addSubscription ('orders', method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -741,59 +738,49 @@ export default class whitebit extends whitebitRest {
         return await this.watch (url, messageHash, message, messageHash);
     }
 
-    async watchMultipleSubscription (messageHash, method, symbol, isNested = false, params = {}) {
+    async addSubscription (type: string, method: string, symbols, isNested = false, params = {}) {
+        if (!Array.isArray (symbols)) {
+            symbols = [ symbols ];
+        }
         await this.loadMarkets ();
         const url = this.urls['api']['ws'];
-        const id = this.nonce ();
         const client = this.safeValue (this.clients, url);
-        let request = undefined;
-        let marketIds = [];
-        if (client === undefined) {
-            const subscription: Dict = {};
-            const market = this.market (symbol);
-            const marketId = market['id'];
-            subscription[marketId] = true;
-            marketIds = [ marketId ];
-            if (isNested) {
-                marketIds = [ marketIds ];
-            }
-            request = {
-                'id': id,
-                'method': method,
-                'params': marketIds,
-            };
-            const message = this.extend (request, params);
-            return await this.watch (url, messageHash, message, method, subscription);
-        } else {
-            const subscription = this.safeValue (client.subscriptions, method, {});
-            let hasSymbolSubscription = true;
+        let subscription: Dict = {};
+        if (client !== undefined) {
+            subscription = this.safeDict (client.subscriptions, method, subscription);
+        }
+        let hasNewSubscription = false;
+        for (let i = 0; i < symbols.length; i++) {
+            const symbol = symbols[i];
             const market = this.market (symbol);
             const marketId = market['id'];
             const isSubscribed = this.safeBool (subscription, marketId, false);
             if (!isSubscribed) {
-                subscription[marketId] = true;
-                hasSymbolSubscription = false;
+                subscription[marketId] = symbol;
+                hasNewSubscription = true;
             }
-            if (hasSymbolSubscription) {
-                // already subscribed to this market(s)
-                return await this.watch (url, messageHash, request, method, subscription);
-            } else {
-                // resubscribe
-                let marketIdsNew = [];
-                marketIdsNew = Object.keys (subscription);
-                if (isNested) {
-                    marketIdsNew = [ marketIdsNew ];
-                }
-                const resubRequest: Dict = {
-                    'id': id,
-                    'method': method,
-                    'params': marketIdsNew,
-                };
-                if (method in client.subscriptions) {
-                    delete client.subscriptions[method];
-                }
-                return await this.watch (url, messageHash, resubRequest, method, subscription);
+        }
+        const newSymbols = Object.values (subscription);
+        const messageHash = type + ':' + newSymbols.join('+');
+        if (!hasNewSubscription) {
+            // already subscribed to all specified market
+            return await this.watch (url, messageHash, undefined, method, subscription);
+        } else {
+            // subscribe to ALL markets (both new and old)
+            const id = this.nonce ();
+            let marketIds = Object.keys (subscription);
+            if (isNested) {
+                marketIds = [ marketIds ];
             }
+            const request: Dict = {
+                'id': id,
+                'method': method,
+                'params': marketIds,
+            };
+            if (method in client.subscriptions) {
+                delete client.subscriptions[method];
+            }
+            return await this.watch (url, messageHash, request, method, subscription);
         }
     }
 
