@@ -261,9 +261,7 @@ export default class whitebit extends whitebitRest {
         const market = this.market (symbol);
         symbol = market['symbol'];
         const method = 'market_subscribe';
-        const messageHash = 'ticker:' + symbol;
-        // every time we want to subscribe to another market we have to "re-subscribe" sending it all again
-        return await this.addSubscription ('ticker', method, symbol, false, params);
+        return await this.watchMultipleSubscription ('ticker', method, symbol, false, params);
     }
 
     handleTicker (client: Client, message) {
@@ -333,7 +331,7 @@ export default class whitebit extends whitebitRest {
         symbol = market['symbol'];
         const method = 'trades_subscribe';
         // every time we want to subscribe to another market we have to 're-subscribe' sending it all again
-        const trades = await this.addSubscription ('trades', method, symbol, false, params);
+        const trades = await this.watchMultipleSubscription ('trades', method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -404,7 +402,7 @@ export default class whitebit extends whitebitRest {
         const market = this.market (symbol);
         symbol = market['symbol'];
         const method = 'deals_subscribe';
-        const trades = await this.addSubscription ('myTrades', method, symbol, true, params);
+        const trades = await this.watchMultipleSubscription ('myTrades', method, symbol, true, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -506,7 +504,7 @@ export default class whitebit extends whitebitRest {
         const market = this.market (symbol);
         symbol = market['symbol'];
         const method = 'ordersPending_subscribe';
-        const trades = await this.addSubscription ('orders', method, symbol, false, params);
+        const trades = await this.watchMultipleSubscription ('orders', method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -738,7 +736,8 @@ export default class whitebit extends whitebitRest {
         return await this.watch (url, messageHash, message, messageHash);
     }
 
-    async addSubscription (type: string, method: string, symbols, isNested = false, params = {}) {
+    async watchMultipleSubscription (type: string, method: string, symbols, isNested = false, params = {}) {
+        // every time we want to subscribe to another market we have to "re-subscribe" sending it all again
         if (!Array.isArray (symbols)) {
             symbols = [ symbols ];
         }
