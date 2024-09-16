@@ -762,22 +762,22 @@ export default class whitebit extends whitebitRest {
                 hasNewSubscription = true;
             }
         }
-        const newSymbols = Object.values (subscription);
-        const messageHash = type + ':' + newSymbols.join('+');
+        const allSymbols = Object.values (subscription);
+        const messageHash = type + ':' + allSymbols.join('+');
         if (!hasNewSubscription) {
-            // already subscribed to all specified market
+            // already subscribed to all specified markets
             return await this.watch (url, messageHash, undefined, method, subscription);
         } else {
-            // subscribe to ALL markets (both new and old)
+            // subscribe to ALL markets (both specified and subscribed to before)
             const id = this.nonce ();
-            let marketIds = Object.keys (subscription);
+            let allIds = Object.keys (subscription);
             if (isNested) {
-                marketIds = [ marketIds ];
+                allIds = [ allIds ];
             }
             const request: Dict = {
                 'id': id,
                 'method': method,
-                'params': marketIds,
+                'params': allIds,
             };
             if (method in client.subscriptions) {
                 delete client.subscriptions[method];
