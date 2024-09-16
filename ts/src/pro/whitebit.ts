@@ -260,8 +260,9 @@ export default class whitebit extends whitebitRest {
         await this.loadMarkets ();
         const market = this.market (symbol);
         symbol = market['symbol'];
+        const type = 'ticker';
         const method = 'market_subscribe';
-        return await this.watchMultipleSubscription ('ticker', method, symbol, false, params);
+        return await this.watchMultipleSubscription (type, method, symbol, false, params);
     }
 
     handleTicker (client: Client, message) {
@@ -329,9 +330,9 @@ export default class whitebit extends whitebitRest {
         await this.loadMarkets ();
         const market = this.market (symbol);
         symbol = market['symbol'];
+        const type = 'trades';
         const method = 'trades_subscribe';
-        // every time we want to subscribe to another market we have to 're-subscribe' sending it all again
-        const trades = await this.watchMultipleSubscription ('trades', method, symbol, false, params);
+        const trades = await this.watchMultipleSubscription (type, method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -401,8 +402,9 @@ export default class whitebit extends whitebitRest {
         await this.authenticate ();
         const market = this.market (symbol);
         symbol = market['symbol'];
+        const type = 'myTrades';
         const method = 'deals_subscribe';
-        const trades = await this.watchMultipleSubscription ('myTrades', method, symbol, true, params);
+        const trades = await this.watchMultipleSubscription (type, method, symbol, true, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
@@ -503,8 +505,9 @@ export default class whitebit extends whitebitRest {
         await this.authenticate ();
         const market = this.market (symbol);
         symbol = market['symbol'];
+        const type = 'orders';
         const method = 'ordersPending_subscribe';
-        const trades = await this.watchMultipleSubscription ('orders', method, symbol, false, params);
+        const trades = await this.watchMultipleSubscription (type, method, symbol, false, params);
         if (this.newUpdates) {
             limit = trades.getLimit (symbol, limit);
         }
