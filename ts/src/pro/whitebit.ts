@@ -758,7 +758,7 @@ export default class whitebit extends whitebitRest {
             const marketId = market['id'];
             const isSubscribed = this.safeBool (subscription, marketId, false);
             if (!isSubscribed) {
-                subscription[marketId] = symbol;
+                subscription[marketId] = market['symbol'];
                 hasNewSubscription = true;
             }
         }
